@@ -149,7 +149,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         
         transformed_obs.x = particles[p_i].x + (cos(particles[p_i].theta) * observations[i].x) - (sin(particles[p_i].theta) * observations[i].y);
         transformed_obs.y = particles[p_i].y + (sin(particles[p_i].theta) * observations[i].x) + (cos(particles[p_i].theta) * observations[i].y);
-        transformed_obs.id = i;
+        transformed_obs.id = observations[i].id;
 
         transformedObservations.push_back(transformed_obs);
       }
