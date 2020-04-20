@@ -112,17 +112,21 @@ class ParticleFilter {
 
   // Set of current particles
   std::vector<Particle> particles;
-  int num_particles;
+  
  
  private:
   // Number of particles to draw
-   
-  std::default_random_engine gen;
+  int num_particles;
   // Flag, if filter is initialized
   bool is_initialized;
   
+  std::default_random_engine gen;
+  
   // Vector of weights of all particles
   std::vector<double> weights; 
+  
+  double weight_normaliser;
+
 };
 
 #endif  // PARTICLE_FILTER_H_

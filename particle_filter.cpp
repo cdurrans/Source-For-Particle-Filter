@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <stdlib.h>
 
 #include "helper_functions.h"
 
@@ -34,7 +35,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    */
 
   std::default_random_engine gen;
-  num_particles = 500;  // TODO: Set the number of particles
+  num_particles = 500;  
   
   double std_x, std_y, std_theta;
 
@@ -48,7 +49,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
   for (int i = 0; i < num_particles; i++) 
   {
-	  struct Particle p;
+	  Particle p;
 	  p.id = i;
 	  p.x = dist_x(gen);
 	  p.y = dist_y(gen);
@@ -58,7 +59,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     weights.push_back(1.0);
   }
   is_initialized = true;
-  std::cout << "Initialized Particle Filter" << std::endl;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], 
@@ -66,27 +66,35 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   /**
    * TODO: Add measurements to each particle and add random Gaussian noise.
    */
-	normal_distribution<double> dist_yaw_rate(yaw_rate, std_pos[1]);
-	normal_distribution<double> dist_velocity(velocity, std_pos[0]);
-	double yaw_rate_noisy = dist_yaw_rate(gen);
-	double velocity_noisy = dist_velocity(gen);
-  double theta_next_step;
+  std::default_random_engine gen;
 
+	normal_distribution<double> dist_x(0.0, std_pos[0]);
+	normal_distribution<double> dist_y(0.0, std_pos[1]);
+  normal_distribution<double> dist_theta(0.0, std_pos[2]);
+	
 	for (int i = 0; i < num_particles; i++) 
   {
-      if (fabs(yaw_rate_noisy) > 0.001) 
+      double x_new, y_new, theta_new;
+      double x_current, y_current, theta_current;
+      x_current = particles[i].x;
+      y_current = particles[i].y;
+      theta_current = particles[i].theta;   
+
+      if (fabs(yaw_rate) > 0.0001) 
       {
-        particles[i].x = particles[i].x + (velocity_noisy / yaw_rate_noisy) * (sin(particles[i].theta + yaw_rate_noisy * delta_t) - sin(particles[i].theta));
-        particles[i].y = particles[i].y + (velocity_noisy / yaw_rate_noisy) * (cos(particles[i].theta) - cos(particles[i].theta + yaw_rate_noisy * delta_t));
-        particles[i].theta = particles[i].theta + (yaw_rate_noisy * delta_t);
+        x_new = x_current + (velocity / yaw_rate) * (sin(theta_current + yaw_rate * delta_t) - sin(theta_current));
+        y_new = y_current + (velocity / yaw_rate) * (cos(theta_current) - cos(theta_current + yaw_rate * delta_t));
+        theta_new = theta_current + yaw_rate * delta_t;
       }
       else 
       {
-        particles[i].x = particles[i].x + velocity_noisy * delta_t * cos(particles[i].theta);
-        particles[i].y = particles[i].y + velocity_noisy * delta_t * sin(particles[i].theta);
-        // particles[i].x = particles[i].x + velocity_noisy * delta_t * cos(yaw_rate_noisy);
-        // particles[i].y = particles[i].y + velocity_noisy * delta_t * sin(yaw_rate_noisy);
+        x_new = x_current + velocity * delta_t * cos(theta_current);
+        y_new = y_current + velocity * delta_t * sin(theta_current);
+        theta_new = theta_current;
       }
+      particles[i].x = x_new + dist_x(gen);
+      particles[i].y = y_new + dist_y(gen);
+      particles[i].theta = theta_new + dist_theta(gen);
   }
 }
 
@@ -100,8 +108,9 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
 	double result_dist, min_dist;
 	for (unsigned int i = 0; i < observations.size(); i++) 
   {
-		min_dist = std::numeric_limits<double>::max();
-		for (unsigned int i2 = 0; i2 < predicted.size(); i2++) 
+    min_dist = std::numeric_limits<double>::max();
+		
+    for (unsigned int i2 = 0; i2 < predicted.size(); i2++) 
     {
 			result_dist = dist(observations[i].x, observations[i].y, predicted[i2].x, predicted[i2].y);
 			if (min_dist > result_dist) 
@@ -191,6 +200,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     sumOfWeights += particles[p_i].weight;
   }
   std::cout << "normalizing constant " << sumOfWeights << std::endl;
+  if (sumOfWeights == 0) {
+  	exit(3);
+  }
   for (int p_i = 0; p_i < num_particles; p_i++) 
   {
     particles[p_i].weight = particles[p_i].weight / sumOfWeights;
@@ -199,13 +211,13 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 }
 
 void ParticleFilter::resample() {
-
+  std::default_random_engine genResample;
   std::discrete_distribution<int> d_weights(weights.begin(), weights.end());
   vector<Particle> particle_temp;
   
   for (int pi = 0; pi < num_particles; pi++) 
   {
-    int p_z = d_weights(gen);
+    int p_z = d_weights(genResample);
     particle_temp.push_back(particles[p_z]);
   }
 	particles = particle_temp;
